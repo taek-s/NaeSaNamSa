@@ -20,6 +20,8 @@ import ns.paging.AdminReportTotalListPaging;
 @Controller
 public class AdminBoardController {
 
+	//건주 커밋 테스트
+	
 	Logger log = Logger.getLogger(this.getClass());
 
 	@Resource(name = "adminBoardService")
