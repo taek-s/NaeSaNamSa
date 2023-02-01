@@ -25,6 +25,7 @@ public class AdminBoardController {
 	//커밋.. 커밋추가
 	
 	//햬리 커밋
+	//동영 커밋
 	
 	Logger log = Logger.getLogger(this.getClass());
 
