@@ -23,7 +23,7 @@ public class AdminBoardController {
 	//건주 커밋 테스트
 	//윤정 커밋
 	//커밋.. 커밋추가
-	
+	//민준 커밋
 	//햬리 커밋
 	//동영 커밋
 	
