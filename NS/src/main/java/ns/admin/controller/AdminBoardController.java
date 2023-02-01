@@ -24,6 +24,8 @@ public class AdminBoardController {
 	//윤정 커밋
 	//커밋.. 커밋추가
 	
+	//햬리 커밋
+	
 	Logger log = Logger.getLogger(this.getClass());
 
 	@Resource(name = "adminBoardService")
