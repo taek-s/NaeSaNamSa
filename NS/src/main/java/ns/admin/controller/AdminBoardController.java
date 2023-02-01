@@ -22,7 +22,7 @@ public class AdminBoardController {
 
 	//건주 커밋 테스트
 	//윤정 커밋
-	//커밋..
+	//커밋.. 커밋추가
 	
 	Logger log = Logger.getLogger(this.getClass());
 
