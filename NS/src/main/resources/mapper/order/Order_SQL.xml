@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="order">
+
+	<!-- 구매하기(배송)시, 회원정보 조회 -->
+	<select id = "selectAccountInfo" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+					MEM_NUM,
+					MEM_EMAIL,
+					MEM_PW,
+					MEM_NAME,
+					MEM_NICKNAME,
+					TO_CHAR(MEM_BIRTH, 'YYMMDD') AS MEM_BIRTH,
+					MEM_GEN,
+					MEM_PHONE,
+					MEM_ZIP,
+					MEM_ADD1,
+					MEM_ADD2,
+					MEM_JOINDATE,
+					MEM_DEL_GB,
+					MEM_STATUS
+			FROM MEMBER
+			WHERE MEM_NUM = #{MEM_NUM}
+		]]>
+	</select>
+
+	<!-- 구매하기(직거래, 배송)시 상품 정보 조회 -->
+	<select id="selectGoodsInfo" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+				SELECT GOODS_TITLE,
+						GOODS_PRICE,
+						GOODS_DCOST
+				FROM GOODS
+				WHERE GOODS_NUM = #{GOODS_NUM}
+		]]>
+	</select>
+
+	<!-- 구매하기 -->
+	<insert id="insertOrder" parameterType="hashmap"> 
+		<![CDATA[ 
+			INSERT INTO ORDERS (
+                           		ORDERS_NUM,
+								ORDERS_PRONUM,
+								ORDERS_USER,
+								ORDERS_PHONE,
+								ORDERS_STATUS,
+								ORDERS_PRICE,
+								ORDERS_DCOST,
+								ORDERS_TCOST,
+								ORDERS_DZIPCODE,
+								ORDERS_DADD1,
+								ORDERS_DADD2,
+								ORDERS_DMEMO
+								)
+	   					VALUES (
+								ORDERS_SEQ.NEXTVAL,
+								#{GOODS_NUM},
+		   						#{ORDERS_USER},
+		   						#{ORDERS_PHONE},
+		   						'결제 완료',
+                				#{ORDERS_PRICE},
+		  						#{ORDERS_DCOST},
+		   						#{ORDERS_TCOST},
+		   						#{ORDERS_DZIPCODE},
+		   						#{ORDERS_DADD1},
+		   						#{ORDERS_DADD2},
+		   						#{ORDERS_DMEMO}
+		 						)
+		]]>
+	</insert>
+	
+	<!-- 배송으로 구매시, 상품 판매상태를 '거래중'으로 변경 -->
+	<update id="updateGoodsTstatusByOrder" parameterType="hashmap">
+		<![CDATA[
+			UPDATE GOODS
+			SET GOODS_TSTATUS = '거래중'
+			WHERE GOODS_NUM = #{GOODS_NUM}
+		]]>
+	</update>
+	
+	<!-- 직거래로 구매시, 상품 판매상태를 '판매완료'로 변경  -->
+	<update id="updateGoodsTstatusByOrder2" parameterType="hashmap">
+		<![CDATA[
+			UPDATE GOODS
+			SET GOODS_TSTATUS = '판매 완료'
+			WHERE GOODS_NUM = #{GOODS_NUM}
+		]]>
+	</update>
+
+	<!-- 구매 상세보기 -->
+	<select id="selectOrderDetail" parameterType="hashmap" resultType="hashmap">   <!-- 수정  -->
+		<![CDATA[
+				SELECT
+       	 				O.ORDERS_NUM,
+       	 				O.ORDERS_PRONUM,
+        				O.ORDERS_USER,
+        				O.ORDERS_PHONE,
+        				O.ORDERS_STATUS,
+        				TO_CHAR(ORDERS_DATE, 'YYYY.MM.DD') AS ORDERS_DATE,
+        				TO_CHAR(ORDERS_DATE, 'HH24:MI:SS') AS ORDERS_TIME,
+        				O.ORDERS_PRICE,
+        				O.ORDERS_DCOST,
+        				O.ORDERS_TCOST,
+        				O.ORDERS_DZIPCODE,
+        				O.ORDERS_DADD1,
+        				O.ORDERS_DADD2,
+        				O.ORDERS_DMEMO,
+        				G.GOODS_NUM,
+        				G.GOODS_SELLER,
+        				G.GOODS_TITLE,
+        				G.GOODS_DEL_GB
+				FROM GOODS G, ORDERS O
+				WHERE G.GOODS_NUM =  O.ORDERS_PRONUM
+                AND O.ORDERS_NUM = #{ORDERS_NUM}
+				AND G.GOODS_DEL_GB = 'N'
+		]]>
+	</select>
+
+	<!-- 구매 수정 -->
+	<update id="updateOrderModify" parameterType="hashmap">
+		<![CDATA[
+				UPDATE ORDERS
+				SET	ORDERS_USER = #{MEM_NUM},
+					ORDERS_PHONE = #{ORDERS_PHONE},
+					ORDERS_DZIPCODE = #{ORDERS_DZIPCODE},
+					ORDERS_DADD1 = #{ORDERS_DADD1},
+					ORDERS_DADD2 = #{ORDERS_DADD2},
+					ORDERS_DMEMO = #{ORDERS_DMEMO}
+				WHERE ORDERS_NUM = #{ORDERS_NUM}
+		]]>
+	</update>
+	
+	<!-- 구매 취소 -->
+	<update id="deleteOrder" parameterType="hashmap">
+		<![CDATA[
+				UPDATE ORDERS
+				SET ORDERS_STATUS = '주문취소',
+					ORDERS_DEL_GB = 'Y'
+				WHERE ORDERS_NUM = #{ORDERS_NUM}
+		]]>
+	</update>
+	
+	<!-- 구매 취소시, 다시 상품 판매상태를 '판매중'으로 변경 -->
+	<update id="updateGoodsTstatusByOrderCancel" parameterType="hashmap">
+		<![CDATA[
+			UPDATE GOODS
+			SET GOODS_TSTATUS = '판매중'
+			WHERE GOODS_NUM = #{ORDERS_PRONUM}
+		]]>
+	</update>
+	
+	<!-- 주문시, DB에서 가장  -->
+	<select id="selectMaxOrderNum" resultType="int">
+		SELECT MAX(ORDERS_NUM) AS ORDERS_NUM FROM ORDERS
+	</select>
+	
+</mapper>

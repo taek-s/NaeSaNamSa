@@ -1,0 +1,41 @@
+	<!-- Core theme CSS (includes Bootstrap)-->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi"
+      crossorigin="anonymous"
+    />
+    
+	<!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
+    
+    <!-- footer CSS -->
+    <link
+      rel="stylesheet"
+      href="<%=request.getContextPath() %>/fonts/icomoon/style.css"
+    />
+    <link
+      href="<%=request.getContextPath() %>/css/footer.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="<%=request.getContextPath() %>/css/bootstrap.min.css"
+    />
+    
+    <!-- Bootstrap Icon -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css"
+    />
+    
+    <!-- Font-Awesome -->
+    <script src="https://kit.fontawesome.com/6b9e34afca.js" crossorigin="anonymous"></script>
+    
+    <!-- Common js -->
+    <script src="<%=request.getContextPath()%>/js/common.js"></script>
+    
+    <!-- Jquery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>

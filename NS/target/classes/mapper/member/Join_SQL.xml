@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="join">
+
+	<!-- 이메일 중복체크  -->
+	<select id="selectEmailCheck" parameterType="hashmap" resultType="hashmap">
+	<![CDATA[  
+		SELECT MEM_EMAIL
+		FROM MEMBER
+		WHERE MEM_EMAIL = #{MEM_EMAIL}
+	]]>
+	</select>
+
+
+	<!-- 닉네임 중복확인 -->
+	<select id="selectNickCheck" parameterType="hashmap" resultType="hashmap">
+	<![CDATA[  
+		SELECT MEM_NICKNAME
+		FROM MEMBER
+		WHERE MEM_NICKNAME = #{MEM_NICKNAME}
+	]]>
+	</select>
+	
+	<!-- 카카오 로그인 전용 번호 가져오기 -->
+	<select id="selectMemPhone" parameterType="hashmap" resultType="hashmap">
+	<![CDATA[  
+		SELECT MEM_PHONE
+		FROM MEMBER
+		WHERE MEM_EMAIL = #{MEM_EMAIL}
+	]]>
+	</select>
+	
+	
+	<!-- 회원가입 처리  -->
+	<insert id="insertMember" parameterType="hashmap">
+	<![CDATA[  
+		INSERT INTO MEMBER(
+					MEM_NUM,
+					MEM_EMAIL,
+					MEM_PW,
+					MEM_NAME,
+					MEM_NICKNAME,
+					MEM_BIRTH,
+					MEM_GEN,
+					MEM_PHONE,
+					MEM_ZIP,
+					MEM_ADD1,
+					MEM_ADD2,
+					MEM_JOINDATE,
+					MEM_DEL_GB,
+					MEM_STATUS,
+					MEM_ADMIN)
+			VALUES(
+					MEMBER_SEQ.NEXTVAL,
+					#{MEM_EMAIL},
+					#{MEM_PW},
+					#{MEM_NAME},
+					#{MEM_NICKNAME},
+					#{MEM_BIRTH},
+					#{MEM_GEN},
+					#{MEM_PHONE},
+					#{MEM_ZIP},
+					#{MEM_ADD1},
+					#{MEM_ADD2},
+					SYSDATE,
+					'N',
+					'N',
+					'N')
+		]]>
+	</insert>
+	
+	<!-- 회원탈퇴 이력 확인 -->
+	<select id="selectDelGB" parameterType="hashmap" resultType="int">
+	<![CDATA[
+			SELECT COUNT(*)
+			FROM MEMBER
+			WHERE MEM_NAME = #{MEM_NAME}
+			AND MEM_BIRTH = #{MEM_BIRTH} 
+            AND MEM_PHONE = #{MEM_PHONE}
+            AND MEM_DEL_GB = 'Y'     
+	]]>
+	</select>
+	
+	<!-- 회원탈퇴 후 7일 지났는지 여부 확인 -->
+	<!-- 이름, 생년월일, 휴대폰번호 입력받아서 현재시간 - 이전에 탈퇴한시간 >=7일 이상일 경우 데이터 조회  -->
+	<select id="selectDelCount" parameterType="hashmap" resultType="int">
+	<![CDATA[
+			SELECT COUNT(MEM_DEL_TIME)
+			FROM MEMBER
+			WHERE SYSDATE - MEM_DEL_TIME >= 7
+			AND MEM_NAME = #{MEM_NAME}
+			AND MEM_BIRTH = #{MEM_BIRTH} 
+            AND MEM_PHONE = #{MEM_PHONE}
+            
+	]]>
+	</select>
+	
+	<update id="updateDelGB" parameterType="hashmap">
+	<![CDATA[
+			UPDATE MEMBER
+			SET MEM_DEL_GB = 'N'
+			WHERE MEM_EMAIL = #{MEM_EMAIL}    
+	]]>
+	</update>
+	
+
+</mapper>

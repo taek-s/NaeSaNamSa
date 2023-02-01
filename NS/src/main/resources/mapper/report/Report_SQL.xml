@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="report">
+
+	<!-- 1) MEMBER 테이블 JOIN없이 REPORT 테이블 내용으로만 데이터 조회 (회원에 대한 정보 X) -->
+	<select id="selectReportList" parameterType="hashmap" resultType="hashmap"> 
+		<![CDATA[
+			SELECT
+					REPORT_NUM,
+					REPORT_TYPE,
+					REPORT_TITLE,
+					REPORT_CONTENT,
+					TO_CHAR(REPORT_DATE, 'YYYY.MM.DD') AS REPORT_DATE,
+					TO_CHAR(REPORT_DATE, 'HH24:MI:SS') AS REPORT_TIME
+			FROM (SELECT
+						ROWNUM RNUM, T1.*
+						FROM (SELECT /*+ INDEX_DESC(REPORT PK_REPORT) */ *
+							  FROM REPORT
+							  WHERE REPORT_DEL_GB = 'N'
+							  AND REPORT_WRITER = #{MEM_NUM})T1
+				  WHERE ROWNUM <= #{END})
+			WHERE RNUM >= #{START}
+			AND REPORT_DEL_GB = 'N'
+		]]>
+	</select>
+	
+	<!-- 페이징을 위해 글 수 가져오기  -->
+	<select id="selectReportCount" parameterType="hashmap" resultType="int">
+		<![CDATA[
+			SELECT COUNT(REPORT_NUM)
+			FROM REPORT
+			WHERE REPORT_WRITER=#{MEM_NUM}
+				AND REPORT_DEL_GB='N'
+		]]>
+	</select>
+
+	<!-- 2) MEMBER 테이블이랑 JOIN해서 작성자 닉네임, 회원번호까지 조회
+	<select id="selectReportList" parameterType="hashmap" resultType="hashmap"> 
+		<![CDATA[
+			SELECT
+					REPORT_NUM,
+					REPORT_TYPE,
+					REPORT_TITLE,
+					M.MEM_NICKNAME, M.MEM_NUM,
+					REPORT_CONTENT,
+					TO_CHAR(REPORT_DATE, 'YYYY.MM.DD') AS REPORT_DATE,
+					TO_CHAR(REPORT_DATE, 'HH24:MI:SS') AS REPORT_TIME
+			FROM MEMBER M, (SELECT
+								  ROWNUM RNUM, T1.*
+								  FROM (SELECT /*+ INDEX_DESC(REPORT PK_REPORT) */ *
+											FROM REPORT
+											WHERE REPORT_DEL_GB = 'N')T1
+								  WHERE ROWNUM <= #{END})
+			WHERE RNUM >= #{START}
+			AND M.MEM_NUM = REPORT_WRITER
+			AND REPORT_DEL_GB = 'N'	
+		]]>
+	</select> -->
+	
+	<!-- 신고 상세보기 -->
+	<select id="selectReportDetail" parameterType="hashmap" resultType="hashmap"> 
+		<![CDATA[
+			SELECT
+					R.REPORT_NUM,
+					R.REPORT_TITLE,
+					R.REPORT_WRITER,
+					TO_CHAR(R.REPORT_DATE, 'YYYY.MM.DD') AS REPORT_DATE,
+					TO_CHAR(R.REPORT_DATE, 'HH24:MI:SS') AS REPORT_TIME,
+					R.REPORT_TYPE,
+					R.REPORT_CONTENT,
+					M.MEM_NICKNAME,
+					M.MEM_NUM,
+					M.MEM_EMAIL
+			FROM REPORT R, MEMBER M
+			WHERE R.REPORT_PRONUM = M.MEM_NUM
+			AND REPORT_DEL_GB = 'N' AND REPORT_NUM = #{REPORT_NUM}
+		]]>
+	</select>
+	
+	<!-- 신고글에 대한 댓글 상세보기 -->
+	<select id = "selectReportReplyDetail" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT REPORT_REPLY_CONTENT
+			FROM REPORT_REPLY
+			WHERE REPORT_REPLY_NUM = #{REPORT_NUM}
+			AND REPORT_REPLY_DEL_GB = 'N'
+		]]>
+	</select>
+
+	<!-- 신고 취소 -->
+	<update id="deleteReport" parameterType="hashmap">
+		<![CDATA[
+			UPDATE REPORT
+			SET REPORT_DEL_GB = 'Y'
+			WHERE REPORT_NUM = #{REPORT_NUM}
+		]]>
+	</update>
+
+	<!-- 신고 댓글 삭제 -->
+	<update id="deleteReportReply" parameterType="hashmap">
+		<![CDATA[
+			UPDATE REPORT_REPLY
+			SET REPORT_REPLY_DEL_GB = 'Y'
+			WHERE REPORT_REPLY_NUM = #{REPORT_NUM}
+		]]>
+	</update>
+
+	<!-- 신고하기 -->
+	 <insert id="insertReport" parameterType="hashmap">
+		<![CDATA[
+   			INSERT INTO REPORT (
+		                		REPORT_NUM,
+		                		REPORT_TITLE,
+		                		REPORT_WRITER,
+		                		REPORT_CONTENT,
+		                		REPORT_PRONUM,
+                        		REPORT_TYPE
+		                		)
+						VALUES (
+		                		REPORT_SEQ.NEXTVAL,
+		               			#{REPORT_TITLE},
+		                		(SELECT MEM_NUM FROM MEMBER WHERE MEM_EMAIL = #{MEM_EMAIL}),
+		                		#{REPORT_CONTENT},
+		                		#{REPORT_PRONUM}, 
+                        		#{REPORT_TYPE}
+		                		)
+		]]>
+	</insert>
+</mapper>

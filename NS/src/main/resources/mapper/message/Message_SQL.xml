@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="message">
+
+   <!-- 메세지 리스트 가져오기 -->
+<select id="message_list" parameterType="hashmap" resultType="hashmap">
+	<![CDATA[
+   SELECT
+    CHAT_NUM,
+    CHAT_ROOM,
+    CHAT_SEND_NUM,
+    CHAT_RECV_NUM,
+    TO_CHAR(CHAT_SEND_TIME, 'YYYY.MM.DD HH24:MI') AS CHAT_SEND_TIME,
+    TO_CHAR(CHAT_READ_TIME, 'YYYY.MM.DD HH24:MI') AS CHAT_READ_TIME,
+    CHAT_CONTENT,
+    CHAT_READ_CHK
+    FROM  CHAT
+    WHERE CHAT_NUM IN
+            (SELECT MAX(NUM)
+                    FROM (SELECT 
+                        CHAT_NUM AS NUM,
+                        CHAT_ROOM,
+                        CHAT_SEND_NUM,
+                        CHAT_RECV_NUM,
+                        CHAT_CONTENT,
+                        CHAT_READ_CHK
+                        FROM CHAT
+                    WHERE (CHAT_SEND_NUM = #{MEM_NUM} OR CHAT_RECV_NUM= #{MEM_NUM})]]> <include refid="messageSearch"/><![CDATA[ ) GROUP BY CHAT_ROOM)
+                    ORDER BY CHAT_NUM DESC
+]]>    
+</select>
+<sql id="messageSearch">
+   <if test="keyword != null">
+      AND CHAT_CONTENT LIKE '%' || #{keyword} || '%'
+   </if>
+</sql>
+
+<!-- 메세지 list에서 상대방 닉네임, 탈퇴여부, 정지여부 가져오기 -->
+<select id="get_other_nickname" parameterType="hashmap" resultType="hashmap">
+    <![CDATA[
+   SELECT MEM_NICKNAME,
+   			MEM_DEL_GB,
+   			MEM_STATUS
+   FROM MEMBER
+   WHERE MEM_NUM = #{MEM_NUM}
+     ]]>
+</select>
+
+<!-- 안읽은 메세지 개수 가져오기 -->
+<select id="count_unread" parameterType="hashmap" resultType="hashmap">
+    <![CDATA[
+    SELECT /*+ INDEX_DESC(CHAT PK_CHAT) */
+          COUNT(CHAT_NUM) AS UNREAD
+   FROM CHAT
+   WHERE CHAT_RECV_NUM = #{MEM_NUM} AND CHAT_READ_CHK=1 AND CHAT_ROOM=#{CHAT_ROOM}
+   ]]>
+</select>
+
+<!-- 메세지 내용 가져오기 -->
+<select id="room_content_list" parameterType="hashmap" resultType="hashmap">
+	<![CDATA[	 
+	  SELECT   C.CHAT_NUM,
+	           C.CHAT_ROOM,
+	           C.CHAT_SEND_NUM,
+	           C.CHAT_RECV_NUM,
+	           TO_CHAR(C.CHAT_SEND_TIME, 'YYYY.MM.DD HH24:MI') AS CHAT_SEND_TIME,
+	           TO_CHAR(C.CHAT_READ_TIME, 'YYYY.MM.DD HH24:MI') AS CHAT_READ_TIME,
+	           C.CHAT_CONTENT,
+	           C.CHAT_READ_CHK,
+	           M.MEM_NICKNAME
+	   FROM CHAT C, MEMBER M
+	   WHERE C.CHAT_RECV_NUM = M.MEM_NUM
+	            AND CHAT_ROOM= #{CHAT_ROOM}
+	              AND (C.CHAT_RECV_NUM =#{MEM_NUM} OR C.CHAT_SEND_NUM=#{MEM_NUM})
+	              ORDER BY C.CHAT_NUM ASC
+	 ]]>
+</select>
+
+<!-- 메세지 읽음 처리 -->
+<update id="message_read_chk" parameterType="hashmap">
+	 <![CDATA[
+	UPDATE CHAT
+	SET CHAT_READ_CHK=0,
+		CHAT_READ_TIME=SYSDATE
+	WHERE CHAT_ROOM=#{CHAT_ROOM}
+	      AND CHAT_READ_CHK=1 AND CHAT_RECV_NUM=#{MEM_NUM}
+	]]>
+</update>
+
+<!-- 메세지리스트에서 메세지 보내기 -->
+<insert id="messageSendInlist" parameterType="hashmap">
+    <![CDATA[
+    INSERT INTO CHAT (
+                CHAT_NUM,
+                CHAT_ROOM,
+                CHAT_SEND_NUM,
+                CHAT_RECV_NUM,
+                CHAT_SEND_TIME,
+                CHAT_CONTENT
+                )
+      VALUES(
+            CHAT_SEQ.NEXTVAL,
+            #{CHAT_ROOM},
+            #{MEM_NUM},
+            #{CHAT_RECV_NUM},
+            SYSDATE,
+            #{CHAT_CONTENT}
+            )
+       ]]>
+</insert>
+
+<!-- room 번호 최대값 구하기 -->
+<select id="max_room"  parameterType="hashmap" resultType="Int">
+   SELECT MAX(CHAT_ROOM)
+   FROM CHAT
+</select>
+
+<!-- 메세지 이력이 있는지 검색 -->
+<select id="exist_chat" parameterType="hashmap" resultType="Int">
+<![CDATA[
+   SELECT COUNT(CHAT_NUM)
+   FROM CHAT
+   WHERE (CHAT_RECV_NUM = #{CHAT_RECV_NUM} AND CHAT_SEND_NUM = #{MEM_NUM})
+		OR (CHAT_RECV_NUM = #{MEM_NUM} AND CHAT_SEND_NUM = #{CHAT_RECV_NUM})
+	  ]]>
+</select>
+
+<!-- 기존 메세지 내역의 room 번호를 가져옴 -->
+<select id="select_room"  parameterType="hashmap" resultType="Int">
+   <![CDATA[
+    SELECT DISTINCT
+    		CHAT_ROOM
+   FROM CHAT
+   WHERE (CHAT_RECV_NUM = #{CHAT_RECV_NUM} AND CHAT_SEND_NUM= #{MEM_NUM})
+           OR(CHAT_RECV_NUM= #{MEM_NUM} AND CHAT_SEND_NUM= #{CHAT_RECV_NUM})
+    ]]>
+</select>
+</mapper>

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="inform">
+
+	<!-- 새로운 공지사항이 작성되면 알림  -->
+	<!-- 판매자에게 등록한 상품이 팔렸다고 알림 -->
+	<!-- 고객센터 문의에 댓글이 작성되면 알림 -->
+	<!-- 신고에 댓글이 작성되면 알림 -->
+	<!-- 메세지가 수신되면 알림 -->
+	<insert id="informInsert" parameterType="hashmap">
+	   <![CDATA[
+		   INSERT INTO INFORM 
+					   		(
+					   		INFORM_NUM,
+							INFORM_CONTENT,
+							INFORM_CONFIRM,
+							INFORM_DATE,
+							INFORM_USER,
+							INFORM_TYPE,
+							INFORM_PRONUM
+							)
+		 				VALUES
+		 					(
+		 					INFORM_SEQ.NEXTVAL,
+		 					#{INFORM_CONTENT},
+		 					'N',
+		 					SYSDATE,
+		 					#{MEM_NUM},
+		 					#{INFORM_TYPE},
+		 					#{INFORM_PRONUM}
+		 					)
+		]]>
+   </insert>
+   
+   	<!-- 알림 리스트 추출(헤더에서 알림 버튼 클릭 시 알림 리스트 조회)-->
+	<select id="informList" parameterType="hashmap" resultType="hashmap"> 
+	<![CDATA[
+		SELECT 
+					INFORM_NUM, 
+					INFORM_CONTENT,
+					INFORM_CONFIRM,
+					INFORM_DATE,
+					INFORM_USER,
+					INFORM_TYPE,
+					INFORM_PRONUM
+		FROM INFORM 
+		WHERE (INFORM_USER = #{MEM_NUM} OR INFORM_USER IS NULL)
+		AND INFORM_CONFIRM = 'N'
+		ORDER BY INFORM_NUM DESC
+	]]>
+	</select>
+	
+	<!-- 알림 확인(알림 확인 시 확인여부를 'Y'로 UPDATE) -->
+	<update id="confirmUpdate" parameterType="hashmap">
+	<![CDATA[
+		UPDATE INFORM
+		SET INFORM_CONFIRM = 'Y'
+		WHERE INFORM_NUM = #{INFORM_NUM}
+	]]>
+	</update>
+	
+	<!-- 전체 회원의 회원번호 조회 (전체 회원에게 공지사항 작성 알림 가도록 하기위함) -->
+	<select id="selectAllUser" parameterType="hashmap" resultType="hashmap"> 
+	<![CDATA[
+		SELECT MEM_NUM 
+		FROM MEMBER
+	]]>
+	</select>
+   
+   
+   
+</mapper>

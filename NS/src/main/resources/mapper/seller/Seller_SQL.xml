@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="seller">
+
+	<!-- 판매자 정보 상세 조회 -->
+	<select id="selectSellerDetail" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+				GOODS_NUM,
+				MEM_NUM,
+       			MEM_NICKNAME,
+        		GOODS_TITLE,
+        		GOODS_PRICE,
+       			TO_CHAR(GOODS_DATE, 'YYYY.MM.DD') AS GOODS_DATE,
+        		GOODS_THUMBNAIL,
+        		GOODS_TSTATUS
+			FROM 
+   						(SELECT ROWNUM RNUM, T1.*
+            			FROM (SELECT /*+ INDEX_DESC(G PK_GOODS) */ *
+                   				FROM GOODS G, MEMBER M
+                   				WHERE G.GOODS_SELLER = M.MEM_NUM
+                                AND G.GOODS_DEl_GB = 'N' AND M.MEM_NUM = #{MEM_NUM}
+                                ]]><include refid="goodsTstatus"></include><![CDATA[) T1
+                                
+            			WHERE ROWNUM <= #{END})
+			WHERE GOODS_SELLER = #{MEM_NUM}
+			AND RNUM >= #{START} AND GOODS_DEL_GB = 'N'
+		]]>	
+		
+	</select>
+	
+	<!-- 판매자 회원 정보 조회 -->
+	<select id="selectSellerInfo" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[  
+		SELECT
+				MEM_NUM,
+				MEM_EMAIL,
+				MEM_PW,
+				MEM_NAME,
+				MEM_NICKNAME,
+				TO_CHAR(MEM_BIRTH, 'YYMMDD') AS MEM_BIRTH,
+				MEM_GEN,
+				MEM_PHONE,
+				MEM_ZIP,
+				MEM_ADD1,
+				MEM_ADD2
+		FROM MEMBER
+		WHERE MEM_NUM = #{MEM_NUM} AND MEM_DEL_GB = 'N'
+		]]>
+	</select>
+	
+	<select id="selectSellerGoodsCount" parameterType="hashmap" resultType="int">
+		<![CDATA[
+			SELECT
+				COUNT(GOODS_NUM)
+			FROM
+				GOODS
+			WHERE
+				GOODS_SELLER = #{MEM_NUM}]]>
+		<include refid="goodsTstatus"></include>
+	</select>
+	
+	<!-- 판매 상태에 따라 검색 -->
+    <sql id="goodsTstatus">
+            <if test="goodsTstatus != null">
+                <if test="goodsTstatus == 'N'.toString()">AND GOODS_TSTATUS = '판매중'</if> <!-- 판매중 -->
+                <if test="goodsTstatus == 'Y'.toString()">AND GOODS_TSTATUS = '판매 완료'</if> <!-- 판매완료 -->
+                <if test="goodsTstatus == 'ING'.toString()">AND GOODS_TSTATUS = '거래중'</if> <!-- 거래중 -->
+            </if>
+    </sql>
+
+	<!-- 판매자 정보 상세보기시, 리뷰 리스트 조회 -->
+	<select id="selectReviewList" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+       			REVIEW_NUM,
+        			Z.REVIEW_WRITER,
+        			Z.REVIEW_CONTENT,
+                    Y.MEM_NICKNAME,
+        			TO_CHAR(Z.REVIEW_DATE, 'YY.MM.DD') AS REVIEW_DATE,
+        			TO_CHAR(Z.REVIEW_DATE, 'HH24:MI') AS REVIEW_TIME
+			FROM (SELECT
+            			ROWNUM RNUM, T1.*
+           			FROM(SELECT /*+INDEX_DESC(R PK_REVIEW) */ *
+                 		FROM REVIEW R, MEMBER M
+                 		WHERE R.REVIEW_MEMNUM = M.MEM_NUM
+                        AND R.REVIEW_DEL_GB = 'N' AND R.REVIEW_MEMNUM = #{MEM_NUM}) T1
+            		WHERE ROWNUM <= #{END}) Z, MEMBER Y
+			WHERE Z.REVIEW_WRITER = Y.MEM_NUM
+            AND RNUM >= #{START} AND REVIEW_DEL_GB = 'N'
+		]]>
+	</select> 
+	
+	       
+	<!-- 추천하기 -->
+	<insert id="insertRecommend" parameterType="hashmap">
+		<![CDATA[
+			INSERT INTO RECOMMEND (
+			                    RECOMMEND_NUM,
+			                    RECOMMEND_USER,
+			                    RECOMMEND_PARENT
+			                    )
+							VALUES (
+			                    RECOMMEND_SEQ.NEXTVAL,
+			                    #{RECOMMEND_NUM},
+			                    (SELECT MEM_NUM FROM MEMBER WHERE MEM_NICKNAME = #{MEM_NICKNAME})
+			                    )
+		]]>
+	</insert>    
+   
+	<!-- 추천취소 -->
+	<delete id="deleteRecommend" parameterType="hashmap">
+		<![CDATA[
+			DELETE 
+			FROM    RECOMMEND 
+			WHERE   RECOMMEND_USER = #{RECOMMEND_NUM}
+			AND     RECOMMEND_PARENT = (SELECT MEM_NUM FROM MEMBER WHERE MEM_NICKNAME = #{MEM_NICKNAME})
+		]]>
+	</delete>
+	
+	<!-- 추천한 회원인지 확인 -->
+	<select id="selectRecommend" parameterType="hashmap" resultType="hashmap"> 
+		<![CDATA[
+			SELECT
+					RECOMMEND_NUM,
+			    	RECOMMEND_USER,
+			    	RECOMMEND_PARENT
+			FROM
+					RECOMMEND
+			WHERE
+					RECOMMEND_USER = #{session_MEM_NUM}
+		]]>
+	</select>
+	
+		<!-- 회원 추천수 조회 -->
+	<select id="selectRecommendCount" parameterType="hashmap" resultType="hashmap"> 
+		<![CDATA[
+			SELECT COUNT(RECOMMEND_PARENT) AS RECOMMEND_COUNT
+			FROM RECOMMEND
+			WHERE RECOMMEND_PARENT = #{MEM_NUM}
+		]]>
+	</select>
+	
+	<!-- 판매자 후기 작성 셀렉트키 -->
+	<insert id="insertReview" parameterType="hashmap" useGeneratedKeys="true" keyProperty="REVIEW_NUM"> 
+		<selectKey keyProperty="REVIEW_NUM" resultType="int" order="BEFORE">
+			SELECT REVIEW_SEQ.NEXTVAL FROM DUAL
+		</selectKey>
+		<![CDATA[ 
+			INSERT INTO REVIEW
+                    			(
+                    			REVIEW_NUM,
+                   				REVIEW_MEMNUM,
+                    			REVIEW_WRITER,
+                   				REVIEW_CONTENT
+                    			)
+						VALUES
+        						(
+        						#{REVIEW_NUM},
+        						#{REVIEW_MEMNUM},
+        						#{REVIEW_WRITER},
+        						#{REVIEW_CONTENT}
+        						)
+		]]> 
+	</insert>
+	
+	<!-- 판매자 후기 한 줄 데이터 가져오기 -->
+	<select id="selectReview" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[ 
+			SELECT
+					R.REVIEW_WRITER,
+			    	R.REVIEW_CONTENT,
+			    	TO_CHAR(R.REVIEW_DATE, 'YYYY.MM.DD') AS REVIEW_DATE,
+        			TO_CHAR(R.REVIEW_DATE, 'HH24:MI:SS') AS REVIEW_TIME,
+                    M.MEM_NICKNAME
+			FROM
+					REVIEW R, MEMBER M
+			WHERE
+                R.REVIEW_WRITER = M.MEM_NUM
+				AND	REVIEW_NUM = #{REVIEW_NUM}
+		]]> 
+	</select>
+	
+	<!-- 페이징을 위해 글 수 가져오기 -->
+	<select id="selectReviewCount" parameterType="hashmap" resultType="int">
+		<![CDATA[
+			SELECT COUNT(REVIEW_NUM) 
+			FROM REVIEW r, MEMBER m  
+			WHERE r.REVIEW_MEMNUM = m.MEM_NUM
+			AND r.REVIEW_MEMNUM = #{MEM_NUM}
+			AND REVIEW_DEL_GB = 'N'
+			
+		]]>
+	</select>
+	
+	<!-- 후기 수정 -->
+	<update id="updateModifyReview" parameterType="hashmap">
+		<![CDATA[
+			UPDATE REVIEW
+			SET REVIEW_CONTENT = #{REVIEW_CONTENT},
+			REVIEW_DATE = SYSDATE
+			WHERE REVIEW_NUM = #{REVIEW_NUM}
+		]]>
+	</update>
+	
+	<!-- 후기 삭제 -->
+	<update id="deleteReview" parameterType="hashmap">
+		<![CDATA[
+			UPDATE REVIEW
+			SET REVIEW_DEL_GB = 'Y'
+			WHERE REVIEW_NUM = #{REVIEW_NUM}
+		]]>
+	</update>
+	
+	<!-- 로그인 한 회원이 주문한 상품 번호 가져오기 -->
+	<select id="selectOrderPronum" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT ORDERS_PRONUM FROM ORDERS
+			WHERE ORDERS_USER = #{MEM_NUM}
+		]]>
+	</select>
+	
+	<!-- 판매자가 등록한 상품 번호 가져오기 -->
+	<select id="selectGoodsNum" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT GOODS_NUM FROM GOODS
+			WHERE GOODS_SELLER = #{MEM_NUM}
+		]]>
+	</select>
+</mapper>

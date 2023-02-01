@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="myPage">
+
+	<!-- 마이페이지 비밀번호 확인 -->
+	<select id = "selectPwCheck" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT MEM_PW
+    		FROM MEMBER
+    		WHERE MEM_EMAIL = #{MEM_EMAIL} 
+		]]>					
+	</select>
+	
+	<!--  마이페이지 회원정보 수정 데이터 가져오기 -->
+	<select id="selectAccountInfo" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[  
+		SELECT
+				MEM_NUM,
+				MEM_EMAIL,
+				MEM_PW,
+				MEM_NAME,
+				MEM_NICKNAME,
+				TO_CHAR(MEM_BIRTH, 'YYYY/MM/DD') AS MEM_BIRTH,
+				MEM_GEN,
+				MEM_PHONE,
+				MEM_ZIP,
+				MEM_ADD1,
+				MEM_ADD2
+		FROM MEMBER
+		WHERE MEM_NUM = #{MEM_NUM} AND MEM_DEL_GB = 'N'
+		]]>
+	</select>
+	
+	<!-- 회원정보 수정 성공 -->
+	<update id="updateAccountModify" parameterType="hashmap" >
+	<![CDATA[
+		UPDATE MEMBER
+		SET
+			MEM_PW=#{MEM_PW},
+			MEM_PHONE=#{MEM_PHONE},
+			MEM_ZIP=#{MEM_ZIP},
+			MEM_ADD1=#{MEM_ADD1},
+			MEM_ADD2=#{MEM_ADD2}
+		WHERE MEM_NUM = #{MEM_NUM}
+	]]>		
+	</update>
+	
+	<update id="updateNaverAccountModify" parameterType="hashmap" >
+	<![CDATA[
+		UPDATE MEMBER
+		SET
+			MEM_ZIP=#{MEM_ZIP},
+			MEM_ADD1=#{MEM_ADD1},
+			MEM_ADD2=#{MEM_ADD2}
+		WHERE MEM_NUM = #{MEM_NUM}
+	]]>		
+	</update>
+	
+	<update id="updateKakaoAccountModify" parameterType="hashmap" >
+	<![CDATA[
+		UPDATE MEMBER
+		SET
+			MEM_PHONE=#{MEM_PHONE},
+			MEM_ZIP=#{MEM_ZIP},
+			MEM_ADD1=#{MEM_ADD1},
+			MEM_ADD2=#{MEM_ADD2}
+		WHERE MEM_NUM = #{MEM_NUM}
+	]]>		
+	</update>
+	
+	<!--  회원 탈퇴 -->
+	<update id="deleteAccount" parameterType="hashmap">
+		<![CDATA[
+		UPDATE MEMBER
+		SET
+			MEM_DEL_GB = 'Y', MEM_DEL_TIME = SYSDATE
+		WHERE
+			MEM_NUM = #{MEM_NUM}
+			AND MEM_DEL_GB='N'
+		]]>
+	</update>
+	
+	<!-- 연동 회원 탈퇴 -->
+	<delete id="realDeleteAccount" parameterType="hashmap">
+		<![CDATA[
+		DELETE
+			FROM MEMBER
+		WHERE
+			MEM_NUM = #{MEM_NUM}
+		]]>
+	</delete>
+	
+	<update id="updateGoodsDelGB" parameterType="hashmap">
+		<![CDATA[
+		UPDATE GOODS
+		SET
+			GOODS_DEL_GB = 'Y'
+		WHERE
+			GOODS_SELLER = #{MEM_NUM}
+			AND GOODS_DEL_GB = 'N'
+		]]>
+	</update>
+</mapper>
