@@ -20,13 +20,15 @@ import ns.paging.AdminReportTotalListPaging;
 @Controller
 public class AdminBoardController {
 
-	//건주 커밋 테스트
-	//윤정 커밋
-	//커밋.. 커밋추가
-	//민준 커밋
-	//햬리 커밋
-	//동영 커밋
-	
+	// 건주 커밋 테스트
+	// 윤정 커밋
+	// 커밋.. 커밋추가
+	// 민준 커밋
+	// 햬리 커밋
+	// 동영 커밋
+
+	// 성택 커밋함
+
 	Logger log = Logger.getLogger(this.getClass());
 
 	@Resource(name = "adminBoardService")
