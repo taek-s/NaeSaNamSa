@@ -31,6 +31,8 @@ public class AdminBoardController {
 	// kst branch 생성하여 커밋
 
 	// test branch 생성하고 테스트 해보기
+	
+	// 건주 test branch 추가
 
 	Logger log = Logger.getLogger(this.getClass());
 
