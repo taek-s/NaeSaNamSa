@@ -28,6 +28,7 @@ public class AdminBoardController {
 	// 동영 커밋
 
 	// 성택 커밋함
+	// kst branch 생성하여 커밋
 
 	Logger log = Logger.getLogger(this.getClass());
 
