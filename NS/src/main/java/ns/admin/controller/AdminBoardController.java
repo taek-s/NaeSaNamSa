@@ -30,6 +30,8 @@ public class AdminBoardController {
 	// 성택 커밋함
 	// kst branch 생성하여 커밋
 
+	// test branch 생성하고 테스트 해보기
+
 	Logger log = Logger.getLogger(this.getClass());
 
 	@Resource(name = "adminBoardService")
