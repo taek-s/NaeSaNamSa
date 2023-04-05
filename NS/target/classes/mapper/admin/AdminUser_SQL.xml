@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="adminUser">
+
+	<!-- 회원 관리 리스트 조회 -->
+	<select id="selectUserList" parameterType="hashmap" resultType="hashmap"> 
+		<![CDATA[
+			SELECT   
+					  MEM_NUM,
+					  MEM_EMAIL,
+					  MEM_PW,
+					  MEM_NAME,
+					  MEM_NICKNAME,
+					  MEM_BIRTH,
+					  MEM_GEN,
+					  MEM_PHONE,
+					  MEM_ZIP,
+					  MEM_ADD1,
+					  MEM_ADD2,
+					  MEM_JOINDATE,
+					  MEM_DEL_GB,
+					  MEM_STATUS
+			FROM  (SELECT
+							ROWNUM RNUM, T1.*
+				   FROM (SELECT /*+ INDEX_DESC(MEMBER PK_MEMBER) */ *
+						 FROM MEMBER
+						 WHERE MEM_ADMIN = 'N']]>
+						 <include refid="searchMember"></include><![CDATA[ )T1
+				   WHERE ROWNUM <= #{END})
+			WHERE RNUM >= #{START}
+		]]>
+		
+	</select>
+
+	<!-- 회원 리스트 조회시, 회원번호/이메일(=아이디)/이름/닉네임/생년월일/성별/회원가입날짜/회원탈퇴여부/회원정지여부 검색 조건에 따라 회원 리스트 조회하기 위함 -->
+	<sql id="searchMember">
+		<if test="searchType != null">
+			<if test="searchType == 'num'.toString()">AND MEM_NUM = #{keyword}</if>
+			<if test="searchType == 'email'.toString()">AND MEM_EMAIL LIKE '%' || #{keyword} || '%'</if>
+			<if test="searchType == 'name'.toString()">AND MEM_NAME LIKE '%' || #{keyword} || '%'</if>
+			<if test="searchType == 'nickname'.toString()">AND MEM_NICKNAME LIKE '%' || #{keyword} || '%'</if>
+			<if test="searchType == 'birth'.toString()">AND MEM_BIRTH LIKE '%' || #{keyword} || '%'</if>
+			<if test="searchType == 'gen'.toString()">AND MEM_GEN LIKE || #{keyword} || </if>
+			<if test="searchType == 'joindate'.toString()">AND MEM_JOINDATE LIKE '%' || #{keyword} || '%'</if>
+			<if test="searchType == 'del_gb'.toString()">AND MEM_DEL_GB = #{keyword}  </if>
+			<if test="searchType == 'status'.toString()">AND MEM_STATUS = #{keyword} </if>
+		</if>
+	</sql>
+
+	<!-- 회원 정보 상세보기  -->
+	<select id="selectAccountInfo" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[  
+			SELECT
+					MEM_NUM,
+					MEM_EMAIL,
+					MEM_PW,
+					MEM_NAME,
+					MEM_NICKNAME,
+					TO_CHAR(MEM_BIRTH, 'YYMMDD') as MEM_BIRTH,
+					MEM_GEN,
+					MEM_PHONE,
+					MEM_ZIP,
+					MEM_ADD1,
+					MEM_ADD2,
+					MEM_JOINDATE,
+					MEM_DEL_GB,
+					MEM_STATUS
+			FROM MEMBER
+			WHERE MEM_NUM = #{MEM_NUM}
+		]]>
+	</select>
+
+	<!-- 회원상태를 정지로 변경 -->
+	<update id="updateAccountStatus" parameterType="hashmap">
+		<![CDATA[
+			UPDATE MEMBER
+			SET MEM_STATUS = 'Y'
+			WHERE MEM_NUM = #{MEM_NUM} AND MEM_DEL_GB = 'N' AND MEM_STATUS='N'
+		]]>
+	</update>
+	
+	<!-- 회원상태를 정지에서 일반으로 변경 -->
+	<update id="updateAccountStatusNormal" parameterType="hashmap">
+		<![CDATA[
+			UPDATE MEMBER
+			SET MEM_STATUS = 'N'
+			WHERE MEM_NUM = #{MEM_NUM} AND MEM_DEL_GB = 'N' AND MEM_STATUS='Y'
+		]]>
+	</update>
+
+	<!-- 회원 탈퇴시키기 (실제 회원 탈퇴X, DEL_GB만 Y로 변경) -->
+	<update id="deleteAccount" parameterType="hashMap">
+		<![CDATA[
+			UPDATE MEMBER
+			SET MEM_DEL_GB = 'Y'
+			WHERE MEM_NUM = #{MEM_NUM} AND MEM_DEL_GB='N'
+		]]>
+	</update>
+
+	<!-- 페이징 하기 위해 회원수 카운트 -->
+	<select id="selectUserCount" parameterType="hashmap" resultType="int">
+		<![CDATA[
+			SELECT COUNT(MEM_NUM)
+			FROM MEMBER
+			WHERE MEM_ADMIN = 'N'
+			]]>
+						 <include refid="searchMember"></include>
+	</select>
+	
+	<update id="deleteGoodsTemp" parameterType="hashMap">
+		<![CDATA[
+		UPDATE GOODS
+		SET
+			GOODS_DEL_GB = 'Y',
+			GOODS_DEL_TEMP = 'Y'
+		WHERE
+			GOODS_SELLER = #{MEM_NUM}
+			AND GOODS_DEL_GB = 'N'
+		]]>
+	</update>
+	
+	
+	<update id="restoreGoods" parameterType="hashMap">
+		<![CDATA[
+		UPDATE GOODS
+		SET
+			GOODS_DEL_GB = 'N',
+			GOODS_DEL_TEMP = 'N'
+		WHERE
+			GOODS_SELLER = #{MEM_NUM}
+			AND GOODS_DEL_GB = 'Y'
+            AND GOODS_DEL_TEMP = 'Y'
+		]]>
+	</update>
+	
+	
+</mapper>
+
+
+
+

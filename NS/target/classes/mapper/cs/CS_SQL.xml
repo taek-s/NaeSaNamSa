@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cs">
+
+	<!-- 고객센터 문의 내역 리스트 조회 -->
+	<!-- 1) MEMBER 테이블 JOIN없이 CS 테이블 내용으로만 데이터 조회 (회원에 대한 정보 X)  -->
+	<select id="selectCSList" parameterType="hashmap" resultType="hashmap"> 
+		<![CDATA[
+			SELECT
+						CS_NUM,
+						CS_TITLE,
+						CS_WRITER,
+						CS_CONTENT,
+						TO_CHAR(CS_DATE, 'YYYY.MM.DD') AS CS_DATE,
+						TO_CHAR(CS_DATE, 'HH24:MI:SS') AS CS_TIME
+			FROM(SELECT
+						ROWNUM RNUM, T1.*
+				 FROM (SELECT /*+ INDEX_DESC(CS PK_CS) */ *
+						FROM CS
+						WHERE CS_DEL_GB = 'N'
+						AND CS_WRITER = #{MEM_NUM}) T1
+				 WHERE ROWNUM <= #{END})
+			WHERE RNUM >= #{START}
+			AND CS_DEL_GB = 'N'
+			
+		]]>
+	</select>
+	
+	<select id="selectAllCsCount" parameterType="hashmap" resultType="int">
+		<![CDATA[
+			SELECT
+				COUNT(CS_NUM)
+			FROM
+				CS
+			WHERE
+				CS_DEL_GB = 'N'
+			AND	
+				CS_WRITER = #{MEM_NUM}
+		]]>
+	</select>
+	
+
+	<!-- 2) MEMBER 테이블이랑 JOIN해서 작성자 닉네임, 회원번호까지 조회
+	<select id="selectCSList" parameterType="hashmap" resultType="hashmap"> 
+		<![CDATA[
+			SELECT
+						CS_NUM,
+						CS_TITLE,
+						CS_CONTENT,
+						TO_CHAR(CS_DATE, 'YYYY.MM.DD') AS CS_DATE,
+						TO_CHAR(CS_DATE, 'HH24:MI:SS') AS CS_TIME,
+						M.MEM_NICKNAME, M.MEM_NUM
+			FROM MEMBER M, (SELECT
+										ROWNUM RNUM, T1.*
+										FROM (SELECT /*+ INDEX_DESC(CS PK_CS) */ *
+												  FROM CS
+												  WHERE CS_DEL_GB = 'N') T1
+												  WHERE ROWNUM <= #{END})
+			WHERE RNUM >= #{START}
+			AND M.MEM_NUM = CS_WRITER
+			AND CS_DEL_GB = 'N'
+		]]>
+	</select> -->
+
+	<!-- 고객센터 문의하기 작성 -->
+	<insert id="insertCS" parameterType="hashmap" useGeneratedKeys="true" keyProperty="CS_NUM">
+	<selectKey keyProperty="CS_NUM" resultType="string" order="BEFORE">
+			SELECT CS_NUM_SEQ.NEXTVAL FROM DUAL
+	</selectKey>
+		<![CDATA[
+			INSERT INTO CS(CS_NUM,
+						   CS_TITLE, 
+						   CS_WRITER, 
+						   CS_CONTENT)
+			VALUES(#{CS_NUM},
+				   #{CS_TITLE},
+				   #{MEM_NUM},
+				   #{CS_CONTENT})
+		]]>
+	</insert>
+
+	<!-- 고객센터 문의시, 파일 첨부 -->
+	<insert id="insertCSFile" parameterType="hashmap">
+		<![CDATA[
+			INSERT INTO FILES(FILES_NUM,
+						  	  FILES_BOARD_TYPE,
+							  FILES_PARENT,
+							  FILES_ORGNAME,
+							  FILES_STDNAME,
+							  FILES_SIZE)
+			VALUES(FILES_SEQ.NEXTVAL, 
+				   #{FILES_BOARD_TYPE},
+				   #{FILES_PARENT}, 
+				   #{FILES_ORGNAME},
+				   #{FILES_STDNAME},
+				   #{FILES_SIZE})
+		]]>
+	</insert>
+
+	<!-- 고객센터 문의 상세보기 -->
+	<select id="selectCSDetail" parameterType="hashmap" resultType="hashmap"> 
+	<![CDATA[
+		SELECT 
+				C.CS_NUM,
+				C.CS_TITLE,
+				TO_CHAR(CS_DATE, 'YYYY.MM.DD') AS CS_DATE,
+				TO_CHAR(CS_DATE, 'HH24:MI:SS') AS CS_TIME,
+				M.MEM_NICKNAME,
+				M.MEM_NUM,
+				C.CS_CONTENT,
+				CASE WHEN F.FILES_DEL_GB = 'Y' THEN 0
+					 WHEN F.FILES_DEL_GB = 'N' THEN F.FILES_NUM
+					 END FILES_NUM,
+				CASE WHEN F.FILES_DEL_GB = 'Y' THEN ''
+					 WHEN F.FILES_DEL_GB = 'N' THEN F.FILES_ORGNAME
+					 END FILES_ORGNAME,
+				CASE WHEN F.FILES_DEL_GB = 'Y' THEN NULL
+					 WHEN F.FILES_DEL_GB = 'N' THEN F.FILES_SIZE
+					 END FILES_SIZE
+		FROM CS C, FILES F, MEMBER M
+		WHERE C.CS_NUM = F.FILES_PARENT(+) AND C.CS_WRITER = M.MEM_NUM
+		AND CS_DEL_GB = 'N' AND CS_NUM = #{CS_NUM}
+	]]>
+	</select>
+	
+	<!-- 고객센터 문의 댓글 상세 조회 (댓글 수정위해 상세 조회) -->
+	<select id="selectCSReplyDetail" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+				CS_REPLY_NUM,
+				CS_REPLY_CONTENT
+			FROM CS_REPLY
+			WHERE
+			CS_REPLY_NUM = #{CS_NUM}
+			AND CS_REPLY_DEL_GB = 'N'
+		]]>
+	</select>
+
+	<!-- 고객센터 문의 삭제 (실제 삭제X. DEL_GB만 Y로 변경) -->
+	<update id="deleteCS" parameterType="hashmap">
+		<![CDATA[
+			UPDATE CS
+			SET CS_DEL_GB = 'Y'
+			WHERE CS_NUM = #{CS_NUM}
+		]]>
+	</update>
+
+	<!-- 고객센터 문의 삭제시, 문의에 달린 댓글도 함께 삭제 (실제 삭제X. DEL_GB만 Y로 변경) -->
+	<update id="deleteCSReply" parameterType="hashmap">
+		<![CDATA[
+			UPDATE CS_REPLY
+			SET CS_REPLY_DEL_GB = 'Y'
+			WHERE CS_REPLY_NUM = #{CS_NUM} 
+		]]>
+	</update>
+
+	<!-- 고객센터 문의 삭제시, 문의시 첨부했던 파일도 함께 삭제 (실제 삭제X. DEL_GB만 Y로 변경) -->
+	<update id="deleteCSFile" parameterType="hashmap">
+		<![CDATA[
+			UPDATE FILES
+			SET FILES_DEL_GB = 'Y'
+			WHERE FILES_BOARD_TYPE = 2 AND FILES_PARENT = #{CS_NUM}
+		]]>
+	</update>
+   
+   
+</mapper>
+
+
+
+ 

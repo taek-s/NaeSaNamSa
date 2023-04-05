@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="faq">
+			
+			
+	<!-- FAQ 리스트 조회 -->
+	<!-- 제목, 내용으로 검색 가능  -->
+	<!-- 관리자, 회원 겸용 -->
+	<select id="selectFAQList" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+						FAQ_NUM,
+						FAQ_TITLE
+			FROM (SELECT
+		                  ROWNUM RNUM, T1.*
+		                  FROM (SELECT /*+ INDEX_DESC(FAQ PK_FAQ) */ *
+		                        FROM FAQ
+		                        WHERE FAQ_DEL_GB = 'N'
+					]]>
+								<include refid="FAQsearch"/><![CDATA[) T1
+		                  WHERE ROWNUM <= #{END})
+			WHERE RNUM >= #{START}
+			AND FAQ_DEL_GB = 'N'
+		]]>
+	</select>
+
+	<sql id="FAQsearch">
+		<if test="searchType != null">
+			<if test="searchType == 'title'.toString()">AND FAQ_TITLE LIKE '%' || #{keyword} || '%'</if>
+			<if test="searchType == 'content'.toString()">AND FAQ_CONTENT LIKE '%' || #{keyword} || '%'</if>
+		</if>
+	</sql>
+	
+	<!-- FAQ 총 개수 조회 -->
+	<select id="selectTotalFAQListCount" parameterType="hashmap" resultType="int">
+		<![CDATA[
+		SELECT 
+        		COUNT(FAQ_NUM)
+		FROM	FAQ
+		WHERE 	FAQ_DEL_GB = 'N']]>
+				<include refid="FAQsearch"/>
+	</select>
+
+	<!-- FAQ 상세보기 -->
+	<!-- 회원, 관리자 겸용  -->
+	<select id = "selectFAQDetail" parameterType="hashmap" resultType="hashmap">
+	<![CDATA[
+		SELECT
+	        	FAQ_NUM,
+	        	FAQ_TITLE,
+	       		FAQ_CONTENT
+		FROM FAQ
+		WHERE FAQ_NUM = #{FAQ_NUM} AND FAQ_DEL_GB = 'N'
+	]]>
+	</select>
+
+</mapper>

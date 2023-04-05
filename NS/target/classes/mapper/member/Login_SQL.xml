@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="login">
+
+
+	<!-- 로그인 체크 -->
+	<select id="selectId" parameterType="hashmap" resultType="hashmap"> 
+		<![CDATA[
+			SELECT *
+			FROM  MEMBER
+			WHERE MEM_EMAIL = #{MEM_EMAIL} 
+			AND MEM_DEL_GB = 'N'
+		]]>
+	</select>
+
+	<!-- 비밀번호 찾기 -->
+	<select id="findIdWithBirth" parameterType="hashmap" resultType="hashmap">
+	<![CDATA[
+		SELECT
+			MEM_NAME,
+			MEM_EMAIL
+	    	FROM MEMBER
+    	WHERE MEM_NAME = #{MEM_NAME}
+    	AND to_char(MEM_BIRTH, 'YYYY-MM-DD')= #{MEM_BIRTH}
+    	AND MEM_PHONE = #{MEM_PHONE}
+		AND MEM_DEL_GB = 'N'
+	]]>
+	</select>
+	<!-- 생년월일 부분은 파라미터로 온 날짜형식과 날짜포맷 맞춰주기  -->
+
+	<!-- 아이디(이메일 찾기) -->
+	<select id = "findPwWithEmail" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+				MEM_PW,
+				MEM_NAME
+		    	FROM MEMBER
+		  	WHERE MEM_NAME = #{MEM_NAME} AND MEM_EMAIL = #{MEM_EMAIL}
+		   	AND MEM_DEL_GB = 'N'
+		]]>
+	</select>
+
+
+
+</mapper>

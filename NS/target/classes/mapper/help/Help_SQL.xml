@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="help">
+		
+	<!-- 고객센터 메인페이지에 표시될 FAQ 리스트  -->
+	<!-- 가장 최신 글 3개 가져오도록 함 -->
+	<select id = "selectMainFAQList" parameterType="hashmap" resultType="hashmap">
+	<![CDATA[
+		SELECT /*+ INDEX_DESC(FAQ PK_FAQ) */
+				ROWNUM, 
+				FAQ_NUM,
+				FAQ_TITLE
+   		FROM FAQ
+    	WHERE FAQ_DEL_GB = 'N'
+    	AND ROWNUM <=3
+	]]>
+	</select>
+
+	<!-- 고객센터 메인페이지에 표시될 가장 최신 공지사항 하나 -->
+	<select id="selectMainNotice" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT /*+ INDEX_DESC(NOTICE PK_NOTICE) */
+					NOTICE_TITLE,
+					NOTICE_NUM,
+					NOTICE_DATE,
+					ROWNUM
+			FROM NOTICE
+			WHERE ROWNUM=1 AND NOTICE_DEL_GB='N'
+		]]>
+	</select>
+
+
+</mapper>

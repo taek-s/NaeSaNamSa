@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="adminBoard">
+
+	<!-- 공지사항 삭제 (실제 삭제X. DEL_GB만 Y로 변경) -->
+	<update id="deleteNotice" parameterType="hashmap">
+		<![CDATA[
+			UPDATE NOTICE
+			SET NOTICE_DEL_GB = 'Y'
+			WHERE NOTICE_NUM = #{NOTICE_NUM}
+		]]>
+	</update>
+	
+	<!-- FAQ 삭제 (실제 삭제X. DEL_GB만 Y로 변경) -->
+	<update id="deleteFAQ" parameterType="hashmap">
+		<![CDATA[
+			UPDATE FAQ
+		    SET FAQ_DEL_GB = 'Y'
+			WHERE FAQ_NUM = #{FAQ_NUM}
+		]]>
+	</update>
+
+	<!-- 공지사항 작성 -->
+	<insert id="insertNotice" parameterType="hashmap" useGeneratedKeys="true" keyProperty="NOTICE_NUM">
+	
+		<selectKey keyProperty="NOTICE_NUM" resultType="int" order="BEFORE">
+			SELECT NOTICE_SEQ.NEXTVAL FROM DUAL
+		</selectKey>
+	
+		<![CDATA[
+			INSERT INTO NOTICE
+				(NOTICE_NUM,
+				NOTICE_TITLE, 
+				NOTICE_CONTENT, 
+				NOTICE_DATE)
+			VALUES
+				(#{NOTICE_NUM},
+				#{NOTICE_TITLE}, 
+				#{NOTICE_CONTENT}, 
+				SYSDATE)
+		]]>
+	</insert>	
+
+	<!-- FAQ 작성 -->
+	<insert id="insertFAQ" parameterType="hashmap">
+		<![CDATA[
+		INSERT INTO FAQ
+			(FAQ_NUM, 
+			 FAQ_TITLE, 
+			 FAQ_CONTENT)
+		VALUES
+			(FAQ_SEQ.NEXTVAL, 
+			 #{FAQ_TITLE}, 
+			 #{FAQ_CONTENT})
+		]]>
+	</insert>
+
+	<!-- 공지사항 상세보기 (공지사항 수정위해 상세 조회) -->
+	<select id="selectNoticeDetail" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+					NOTICE_NUM,
+					NOTICE_TITLE,
+					TO_CHAR(NOTICE_DATE, 'YYYY.MM.DD') AS NOTICE_DATE,
+					TO_CHAR(NOTICE_DATE, 'HH24:MI:SS') AS NOTICE_TIME,
+					NOTICE_CONTENT
+			FROM NOTICE
+			WHERE NOTICE_NUM = #{NOTICE_NUM}
+			AND NOTICE_DEL_GB='N'
+		]]>
+	</select>
+
+	<!-- FAQ 상세보기 (FAQ 수정위해 상세 조회) -->
+	<select id = "selectFAQDetail" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+	        		FAQ_NUM,
+	        		FAQ_TITLE,
+		       		FAQ_CONTENT
+			FROM FAQ
+			WHERE FAQ_NUM = #{FAQ_NUM} AND FAQ_DEL_GB = 'N'
+		]]>
+	</select>
+
+	<!-- 공지사항 수정 -->
+	<update id="updateNoticeModify" parameterType="hashmap">
+		<![CDATA[
+			UPDATE NOTICE
+			SET
+				NOTICE_TITLE = #{NOTICE_TITLE},
+				NOTICE_CONTENT = #{NOTICE_CONTENT}
+			WHERE NOTICE_NUM = #{NOTICE_NUM}
+		]]>
+	</update>
+
+	<!-- FAQ 수정 -->
+	<update id="updateFAQModify" parameterType="hashmap">
+		<![CDATA[
+			UPDATE FAQ
+			SET
+				FAQ_TITLE = #{FAQ_TITLE},
+				FAQ_CONTENT = #{FAQ_CONTENT}
+			WHERE FAQ_NUM = #{FAQ_NUM}
+		]]>
+	</update>
+
+	<!-- 고객센터 문의 리스트 조회(한 페이지에 10개씩)-->
+	<select id="selectAdminCSList" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+		SELECT C.CS_NUM,
+			   C.CS_TITLE,
+			   C.CS_WRITER,
+			   TO_CHAR(CS_DATE, 'YYYY.MM.DD') AS CS_DATE,
+			   M.MEM_NICKNAME,
+			   M.MEM_NUM
+		FROM (SELECT
+					ROWNUM RNUM, T1.*
+			  FROM (SELECT /*+ INDEX_DESC(C PK_CS) */ *
+				    FROM CS C, MEMBER M
+				    WHERE C.CS_WRITER = M.MEM_NUM
+                    AND C.CS_DEL_GB = 'N' ]]><include refid="CSsearch"/><![CDATA[) T1
+			  WHERE ROWNUM <= #{END}) C, MEMBER M
+		WHERE C.CS_WRITER = M.MEM_NUM
+		AND RNUM >= #{START}
+		ORDER BY C.CS_NUM DESC
+	]]>
+	</select>
+	
+	<!-- 고객센터 문의 총 게시글 수 -->
+	<select id="selectAdminCSCount" parameterType="hashmap" resultType="int">
+		<![CDATA[
+			SELECT
+					COUNT(CS_NUM)
+			FROM
+					CS C, MEMBER M
+			WHERE	C.CS_WRITER = M.MEM_NUM
+				AND	C.CS_DEL_GB = 'N']]>
+					<include refid="CSsearch"/>
+	</select>
+
+	<!-- 문의 리스트 조회시, 제목/내용/닉네임 검색 조건에 따라 문의 리스트 조회하기 위함 -->
+	<sql id="CSsearch">
+		<if test="searchType != null">
+			<if test="searchType == 'title'.toString()">AND C.CS_TITLE LIKE '%' || #{keyword} || '%'</if>
+			<if test="searchType == 'content'.toString()">AND C.CS_CONTENT LIKE '%' || #{keyword} || '%'</if>
+			<if test="searchType == 'nickname'.toString()">AND M.MEM_NICKNAME LIKE '%' || #{keyword} || '%'</if>
+		</if>
+	</sql>
+
+	<!-- 고객센터 문의 상세보기 (문의에 대한 댓글 달기 위해 상세 조회) -->
+	<select id="selectCSDetail" parameterType="hashmap" resultType="hashmap"> 
+		<![CDATA[
+			SELECT 
+				C.CS_NUM,
+				C.CS_TITLE,
+				TO_CHAR(CS_DATE, 'YYYY.MM.DD') AS CS_DATE,
+				TO_CHAR(CS_DATE, 'HH24:MI:SS') AS CS_TIME,
+				M.MEM_NICKNAME,
+				M.MEM_NUM,
+				C.CS_CONTENT,
+				CASE WHEN F.FILES_DEL_GB = 'Y' THEN 0
+					 WHEN F.FILES_DEL_GB = 'N' THEN F.FILES_NUM
+					 END FILES_NUM,
+				CASE WHEN F.FILES_DEL_GB = 'Y' THEN ''
+					 WHEN F.FILES_DEL_GB = 'N' THEN F.FILES_ORGNAME
+					 END FILES_ORGNAME,
+				CASE WHEN F.FILES_DEL_GB = 'Y' THEN NULL
+					 WHEN F.FILES_DEL_GB = 'N' THEN F.FILES_SIZE
+					 END FILES_SIZE
+		FROM CS C, FILES F, MEMBER M
+		WHERE C.CS_NUM = F.FILES_PARENT(+) AND C.CS_WRITER = M.MEM_NUM
+		AND CS_DEL_GB = 'N' AND CS_NUM = #{CS_NUM}
+		]]>
+	</select>
+
+	<!-- 고객센터 문의 댓글 작성 -->
+	<insert id="insertCSReply" parameterType="hashmap">
+		<![CDATA[
+			INSERT INTO CS_REPLY
+						(CS_REPLY_NUM,
+						CS_REPLY_CONTENT)
+			VALUES
+				(#{CS_NUM},
+				#{CS_REPLY_CONTENT}
+				)
+		]]>
+	</insert>
+
+	<!-- 고객센터 문의 댓글 상세 조회 (댓글 수정위해 상세 조회) -->
+	<select id="selectCSReplyDetail" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+				CS_REPLY_NUM,
+				CS_REPLY_CONTENT
+			FROM CS_REPLY
+			WHERE
+			CS_REPLY_NUM = #{CS_NUM}
+			AND CS_REPLY_DEL_GB = 'N'
+		]]>
+	</select>	
+
+	<!-- 고객센터 문의 댓글 수정 -->
+	<update id="updateCSReply" parameterType="hashmap">
+		<![CDATA[
+			UPDATE CS_REPLY
+			SET
+				CS_REPLY_CONTENT = #{CS_REPLY_CONTENT},
+				CS_REPLY_DATE = SYSDATE
+			WHERE CS_REPLY_NUM = #{CS_NUM}
+			AND CS_REPLY_DEL_GB = 'N'
+		]]>
+	</update>
+
+	<!-- 고객센터 문의 댓글 삭제 (실제 삭제X. DEL_GB만 Y로 변경) -->
+	<update id="deleteCSReply" parameterType="hashmap">
+		<![CDATA[
+			UPDATE CS_REPLY
+			SET CS_REPLY_DEL_GB = 'Y'
+			WHERE CS_REPLY_NUM = #{CS_NUM}
+		]]>
+	</update>
+
+	<!-- 고객센터 문의 삭제 (실제 삭제X. DEL_GB만 Y로 변경) -->
+	<update id="deleteCS" parameterType="hashmap">
+		<![CDATA[
+			UPDATE CS
+			SET CS_DEL_GB = 'Y'
+			WHERE CS_NUM = #{CS_NUM}
+		]]>
+	</update>
+	
+	<!-- 고객센터 문의 삭제시, 문의시 첨부한 파일도 함께 삭제 (실제 삭제X. DEL_GB만 Y로 변경)  -->
+	<update id="deleteCSFile" parameterType="hashmap">
+		<![CDATA[
+			UPDATE FILES
+			SET FILES_DEL_GB = 'Y'
+			WHERE FILES_BOARD_TYPE = 2 AND FILES_PARENT = #{CS_NUM}
+		]]>
+	</update>
+
+	<!-- 신고 리스트 조회 -->
+	<select id="selectAdminReportList" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+		SELECT R.REPORT_NUM,
+			   R.REPORT_TITLE,
+			   R.REPORT_WRITER,
+			   R.REPORT_DATE,
+			   R.REPORT_TYPE,
+			   M.MEM_NUM,
+			   M.MEM_NICKNAME
+		FROM (SELECT
+					ROWNUM RNUM, T1.*
+			  FROM (SELECT /*+ INDEX_DESC(R PK_REPORT) */ *
+				    FROM REPORT R, MEMBER M
+				    WHERE R.REPORT_WRITER = M.MEM_NUM
+                    AND R.REPORT_DEL_GB = 'N' ]]><include refid="reportSearch"/><![CDATA[) T1
+			  WHERE ROWNUM <= #{END}) R, MEMBER M
+		WHERE R.REPORT_WRITER = M.MEM_NUM
+		AND RNUM >= #{START}
+		ORDER BY R.REPORT_NUM DESC
+	]]>
+	</select>
+	
+	<!-- 신고 총 게시글 수 -->
+	<select id="selectAdminReportCount" parameterType="hashmap" resultType="int">
+		<![CDATA[
+			SELECT
+					COUNT(REPORT_NUM)
+			FROM
+					REPORT R, MEMBER M
+			WHERE	R.REPORT_WRITER = M.MEM_NUM
+				AND	R.REPORT_DEL_GB = 'N']]>
+					<include refid="reportSearch"/>
+	</select>
+
+	<!-- 신고 리스트 조회시, 제목/내용/닉네임 검색 조건에 따라 문의 리스트 조회하기 위함 -->
+	<sql id="reportSearch">
+		<if test="searchType != null">
+			<if test="searchType == 'title'.toString()">AND R.REPORT_TITLE LIKE '%' || #{keyword} || '%'</if>
+			<if test="searchType == 'content'.toString()">AND R.REPORT_CONTENT LIKE '%' || #{keyword} || '%'</if>
+			<if test="searchType == 'nickname'.toString()">AND M.MEM_NICKNAME  LIKE '%' || #{keyword} || '%'</if>
+		</if>
+	</sql>
+
+	<!-- 신고글 내역 상세보기 (댓글 달아주기 위해 상세 조회) -->
+	<select id="selectReportDetail" parameterType="hashmap" resultType="hashmap"> 
+		<![CDATA[
+			 SELECT
+					REPORT_NUM,
+					REPORT_TITLE,
+					REPORT_WRITER,
+					TO_CHAR(REPORT_DATE, 'YYYY.MM.DD') AS REPORT_DATE,
+					TO_CHAR(REPORT_DATE, 'HH24:MI:SS') AS REPORT_TIME,
+					REPORT_TYPE,
+					REPORT_CONTENT,
+					M.MEM_NICKNAME,
+					M.MEM_NUM,
+					M.MEM_EMAIL
+			FROM REPORT, MEMBER M
+			WHERE REPORT_WRITER = M.MEM_NUM
+			AND REPORT_DEL_GB = 'N' AND REPORT_NUM = #{REPORT_NUM}
+		]]>
+	</select>		
+
+	<!-- 신고글에 댓글 작성 -->
+	<insert id="insertReportReply" parameterType="hashmap">
+		<![CDATA[
+			INSERT INTO REPORT_REPLY(
+									REPORT_REPLY_NUM,
+									REPORT_REPLY_CONTENT,
+									REPORT_REPLY_DATE
+									)
+			VALUES(
+					#{REPORT_NUM},
+					#{REPORT_REPLY_CONTENT},
+					SYSDATE
+				  )
+		
+		]]>
+	</insert>
+	
+	<!-- 신고글에 대한 댓글 상세보기 (댓글 수정위해 상세 조회) -->
+	<select id = "selectReportReplyDetail" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT REPORT_REPLY_CONTENT
+			FROM REPORT_REPLY
+			WHERE REPORT_REPLY_NUM = #{REPORT_NUM}
+			AND REPORT_REPLY_DEL_GB = 'N'
+		]]>
+	</select>
+
+	<!-- 신고글에 대한 댓글 수정 -->
+	<update id="updateReportReply" parameterType="hashmap">
+		<![CDATA[
+			UPDATE REPORT_REPLY
+			SET
+				REPORT_REPLY_CONTENT = #{REPORT_REPLY_CONTENT},
+				REPORT_REPLY_DATE = SYSDATE
+			WHERE REPORT_REPLY_NUM = #{REPORT_NUM}
+		]]>
+	</update>
+	
+	<!-- 신고글 삭제 (실제 삭제X. DEL_GB만 Y로 변경) -->
+	<update id="deleteReport" parameterType="hashMap">
+		<![CDATA[
+			UPDATE  REPORT
+			SET     REPORT_DEL_GB = 'Y'
+			WHERE   REPORT_NUM = #{REPORT_NUM}
+		]]>
+	</update>
+	
+	<!-- 신고글에 대한 댓글 삭제 (실제 삭제X. DEL_GB만 Y로 변경) -->
+	<update id="deleteReportReply" parameterType="hashmap">
+		<![CDATA[
+			UPDATE  REPORT_REPLY
+			SET     REPORT_REPLY_DEL_GB = 'Y'
+			WHERE   REPORT_REPLY_NUM = #{REPORT_NUM}
+		]]>
+	</update>
+
+	<!-- 상품 삭제 (실제 삭제X. DEL_GB만 Y로 변경) -->
+	<update id="deleteGoods" parameterType="hashmap">
+		<![CDATA[
+			UPDATE GOODS
+			SET GOODS_DEL_GB = 'Y'
+			WHERE GOODS_NUM = #{GOODS_NUM}
+		]]>
+	</update>
+
+	<!-- 상품 삭제시, 관련된 상품 이미지도 삭제 (실제 삭제X. DEL_GB만 Y로 변경) -->
+	<update id="deleteGoodsImage" parameterType="hashmap">
+		<![CDATA[
+			UPDATE GOODS_IMAGE
+			SET GOODS_IMAGE_DEL_GB = 'Y'
+			WHERE GOODS_IMAGE_PARENT = #{GOODS_NUM}
+		]]>
+	</update>
+	
+</mapper>

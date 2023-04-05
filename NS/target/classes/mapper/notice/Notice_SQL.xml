@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="notice">
+
+	<!-- 공지사항 리스트 조회 -->
+	<select id="selectNoticeList" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+		SELECT NOTICE_NUM,
+				NOTICE_TITLE, 
+				TO_CHAR(NOTICE_DATE, 'YYYY.MM.DD') AS NOTICE_DATE,
+				TO_CHAR(NOTICE_DATE, 'HH24:MI:SS') AS NOTICE_TIME
+		FROM (SELECT
+						ROWNUM RNUM, T1.*
+						FROM (SELECT /*+ INDEX_DESC(NOTICE PK_NOTICE) */ *
+										FROM NOTICE
+										WHERE NOTICE_DEL_GB = 'N']]>
+										<include refid="noticeSearch"/><![CDATA[) T1
+						WHERE ROWNUM <= #{END})
+		WHERE RNUM >= #{START} AND NOTICE_DEL_GB = 'N'
+		]]>
+	</select>
+
+	<sql id="noticeSearch"> <!-- 제목, 내용으로 검색 -->
+		<if test="searchType != null">
+			<if test="searchType == 'title'.toString()">AND NOTICE_TITLE LIKE '%' || #{keyword} || '%'</if>
+			<if test="searchType == 'content'.toString()">AND NOTICE_CONTENT LIKE '%' || #{keyword} || '%'</if>
+		</if>
+	</sql>
+	
+	<!-- 공지사항 총 개수 조회 -->
+	<select id="selectTotalNoticeListCount" parameterType="hashmap" resultType="int">
+		<![CDATA[
+		SELECT 
+        		COUNT(NOTICE_NUM)
+		FROM	NOTICE
+		WHERE 	NOTICE_DEL_GB = 'N']]>
+				<include refid="noticeSearch"/>
+	</select>
+
+	<!--  공지사항 상세보기 -->
+	<select id="selectNoticeDetail" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT
+					NOTICE_NUM,
+					NOTICE_TITLE,
+					TO_CHAR(NOTICE_DATE, 'YYYY.MM.DD') AS NOTICE_DATE,
+					TO_CHAR(NOTICE_DATE, 'HH24:MI:SS') AS NOTICE_TIME,
+					NOTICE_CONTENT
+			FROM NOTICE
+			WHERE NOTICE_NUM = #{NOTICE_NUM}
+			AND NOTICE_DEL_GB='N'
+		]]>
+	</select>
+
+
+</mapper>

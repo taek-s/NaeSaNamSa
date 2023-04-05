@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="shop">
+
+	<!-- 전체 상품 조회하기 -->
+	<select id="selectAllGoodsList" parameterType="hashmap" resultType="hashmap"> 
+		<![CDATA[
+			SELECT
+				G.GOODS_NUM,
+				G.GOODS_TITLE,
+				G.GOODS_PRICE,
+				G.GOODS_COUNT,
+				TO_CHAR(G.GOODS_DATE, 'YYYY.MM.DD') AS GOODS_DATE,
+				TO_CHAR(G.GOODS_DATE, 'HH24:MI:SS') AS GOODS_TIME,
+				G.GOODS_THUMBNAIL,
+				G.GOODS_TSTATUS,
+				M.MEM_NICKNAME
+			FROM (SELECT
+						ROWNUM RNUM, T1.*
+				 FROM (SELECT /*+ INDEX_DESC(GOODS PK_GOODS) */ *
+						FROM GOODS
+						WHERE GOODS_DEL_GB = 'N']]>
+						<include refid="tstatusOption"></include>
+						<include refid="priceOption"></include>
+						<include refid="categoryOption"></include>
+						<include refid="keywordOption"></include><![CDATA[)T1
+				 WHERE ROWNUM <= #{END}) G, MEMBER M
+			WHERE G.GOODS_SELLER = M.MEM_NUM
+			AND RNUM >= #{START}
+			AND G.GOODS_DEL_GB = 'N'
+			ORDER BY G.GOODS_NUM DESC
+		]]>
+	</select>
+	
+	<sql id="priceOption">
+				<if test="priceType != null">
+				<if test="priceType == 'A'.toString()">AND GOODS_PRICE BETWEEN 0 AND 30000</if>
+				<if test="priceType == 'B'.toString()">AND GOODS_PRICE BETWEEN 30001 AND 60000</if>
+				<if test="priceType == 'C'.toString()">AND GOODS_PRICE BETWEEN 60001 AND 100000	</if>
+				<if test="priceType == 'D'.toString()">AND GOODS_PRICE > 100000</if>
+				</if>
+	</sql>
+
+	<sql id="tstatusOption">
+				<if test="tstatusType != null">
+				<if test="tstatusType == 'N'.toString()">AND GOODS_TSTATUS = '판매중'</if>
+				<if test="tstatusType == 'Y'.toString()">AND GOODS_TSTATUS = '판매 완료'</if>
+				<if test="tstatusType == 'ING'.toString()">AND GOODS_TSTATUS = '거래중'</if>
+				</if>
+	</sql>
+	
+	<sql id="categoryOption">
+				<if test="categoryType != null">
+				<if test="categoryType == 'T'.toString()">AND GOODS_CATEGORY = '상의'</if>
+				<if test="categoryType == 'B'.toString()">AND GOODS_CATEGORY = '하의'</if>
+				<if test="categoryType == 'S'.toString()">AND GOODS_CATEGORY = '신발'</if>
+				<if test="categoryType == 'A'.toString()">AND GOODS_CATEGORY = '악세사리'</if>
+				</if>
+	</sql>
+	
+	<sql id="keywordOption">
+				<if test="keyword!=null and keyword!=''">
+				AND GOODS_TITLE like '%' || #{keyword} ||'%'
+				</if>
+	</sql>
+	
+	<select id="selectAllGoodsCount" parameterType="hashmap" resultType="int">
+		<![CDATA[
+			SELECT
+					COUNT(GOODS_NUM)
+			FROM
+					GOODS
+			WHERE
+					GOODS_DEL_GB = 'N']]>
+					<include refid="tstatusOption"></include>
+					<include refid="priceOption"></include>
+					<include refid="categoryOption"></include>
+					<include refid="keywordOption"></include>
+	</select>
+	
+	<!-- 상품 정보 상세보기 -->
+	<select id="selectGoodsDetail" parameterType="hashmap" resultType="hashmap"> 
+		<![CDATA[
+			SELECT  
+					G.GOODS_NUM,
+					M.MEM_NICKNAME,
+					M.MEM_NUM,
+					G.GOODS_TITLE,
+					G.GOODS_CONTENT,
+					G.GOODS_PRICE,
+					G.GOODS_DCOST,
+					G.GOODS_CATEGORY,
+					TO_CHAR(G.GOODS_DATE, 'YYYY.MM.DD') AS GOODS_DATE,
+					TO_CHAR(G.GOODS_DATE, 'HH24:MI:SS') AS GOODS_TIME,
+					G.GOODS_COUNT,
+					G.GOODS_STATUS,
+					G.GOODS_DEL_GB,
+					G.GOODS_THUMBNAIL,
+					G.GOODS_TSTATUS
+			FROM   GOODS G, 
+					(SELECT MEM_NUM, MEM_NICKNAME
+					 FROM MEMBER) M
+			WHERE  G.GOODS_SELLER = M.MEM_NUM
+			AND  G.GOODS_NUM = #{GOODS_NUM}
+			AND  G.GOODS_DEL_GB = 'N'
+		]]>
+	</select>
+
+	<!-- 상품 이미지 보기 -->
+	<select id="selectGoodsImage" parameterType="hashmap" resultType="hashmap"> 
+		<![CDATA[
+			SELECT 
+					GOODS_IMAGE_NUM,
+					GOODS_IMAGE_ORG,
+					GOODS_IMAGE_STD
+			FROM GOODS_IMAGE
+			WHERE GOODS_IMAGE_PARENT = #{GOODS_NUM}
+			AND GOODS_IMAGE_DEL_GB = 'N'
+			ORDER BY GOODS_IMAGE_ORDER
+		]]>
+	</select>
+
+	<!-- 상품 조회수 증가 (상품 조회시, 조회수 1씩 증가) -->
+	<update id="updateHitCnt" parameterType="hashmap">
+		<![CDATA[
+			UPDATE GOODS
+			SET GOODS_COUNT = GOODS_COUNT + 1
+			WHERE GOODS_NUM = #{GOODS_NUM}
+		]]>
+	</update>
+
+	<!-- 상품 찜수 조회 -->
+	<select id="selectGoodsLikeCount" parameterType="hashmap" resultType="hashmap"> 
+		<![CDATA[
+			SELECT COUNT(GOODS_LIKE_PARENT) AS GOODS_LIKE_COUNT
+			FROM GOODS_LIKE
+			WHERE GOODS_LIKE_PARENT = #{GOODS_NUM}
+		]]>
+	</select>
+	
+	<!-- 상품 등록 -->
+	<insert id="insertGoods" parameterType="hashmap" useGeneratedKeys="true" keyProperty="GOODS_NUM">
+		<selectKey keyProperty="GOODS_NUM" resultType="int" order="BEFORE">
+			SELECT GOODS_SEQ.NEXTVAL FROM DUAL
+		</selectKey>
+		<![CDATA[
+			INSERT INTO GOODS
+                    (
+                    GOODS_NUM,
+                    GOODS_SELLER,
+                    GOODS_TITLE,
+                    GOODS_CONTENT,
+                    GOODS_PRICE,
+                    GOODS_DATE,
+                    GOODS_CATEGORY,
+                    GOODS_COUNT,
+                    GOODS_DCOST,
+                    GOODS_STATUS,
+                    GOODS_THUMBNAIL
+                    )
+			VALUES
+                    (
+                    #{GOODS_NUM},
+                    #{GOODS_SELLER},
+                    #{GOODS_TITLE},
+                    #{GOODS_CONTENT},
+                    #{GOODS_PRICE},
+                    SYSDATE,
+                    #{GOODS_CATEGORY},
+                    0,
+                    #{GOODS_DCOST},
+                    #{GOODS_STATUS},
+                    #{GOODS_THUMBNAIL}
+                    )
+		]]>
+	</insert>
+
+	<!-- 상품 등록시, 상품 이미지 삽입 -->
+	<insert id="insertGoodsImage" parameterType="hashmap">
+		<![CDATA[
+			INSERT INTO GOODS_IMAGE
+                    (
+					GOODS_IMAGE_NUM, 
+                    GOODS_IMAGE_PARENT,
+                    GOODS_IMAGE_ORG,
+                    GOODS_IMAGE_STD, 
+                    GOODS_IMAGE_ORDER 
+                    )
+			VALUES
+        			(
+					GOODS_IMAGE_SEQ.NEXTVAL,
+       				#{GOODS_IMAGE_PARENT},
+					#{GOODS_IMAGE_ORG},
+       				#{GOODS_IMAGE_STD},
+       				#{GOODS_IMAGE_ORDER}
+      	 			)
+		]]>
+	</insert>
+
+	<!-- 상품 수정 -->
+	<update id="updateGoodsModify" parameterType="hashMap">
+		<![CDATA[
+			UPDATE GOODS
+			SET  GOODS_TITLE = #{GOODS_TITLE},
+      			 GOODS_CONTENT = #{GOODS_CONTENT},
+       			 GOODS_PRICE = #{GOODS_PRICE},
+       			 GOODS_DATE = SYSDATE,
+       			 GOODS_CATEGORY = #{GOODS_CATEGORY},
+       			 GOODS_DCOST = #{GOODS_DCOST},
+       			 GOODS_STATUS = #{GOODS_STATUS},
+       			 GOODS_THUMBNAIL = #{GOODS_THUMBNAIL}
+			WHERE GOODS_NUM = #{GOODS_NUM}
+			AND GOODS_DEL_GB = 'N'
+			AND GOODS_TSTATUS= '판매중'
+		]]>
+	</update>
+
+	<!-- 상품 이미지 수정 -->
+	<update id="updateGoodsImageModify" parameterType="hashMap">
+		<![CDATA[
+			UPDATE GOODS_IMAGE
+			SET GOODS_IMAGE_DEL_GB = 'N',
+				GOODS_IMAGE_ORDER = #{GOODS_IMAGE_ORDER}
+			WHERE GOODS_IMAGE_NUM = #{GOODS_IMAGE_NUM}
+		]]>
+	</update>
+	
+	<!-- 상품 삭제 (실제 삭제X. DEL_GB만 Y로 변경) -->
+	<update id="deleteGoods" parameterType="hashmap">
+		<![CDATA[
+			UPDATE GOODS
+			SET GOODS_DEL_GB = 'Y'
+			WHERE GOODS_NUM = #{GOODS_NUM}
+		]]>
+	</update>
+
+	<!-- 상품 이미지 삭제 (실제 삭제X. DEL_GB만 Y로 변경) -->
+	<update id="deleteGoodsImage" parameterType="hashmap">
+		<![CDATA[
+			UPDATE GOODS_IMAGE
+			SET GOODS_IMAGE_DEL_GB = 'Y'
+			WHERE GOODS_IMAGE_PARENT = #{GOODS_NUM}
+		]]>
+	</update>
+          
+	<!-- 찜하기 -->
+	<insert id="insertGoodsLike" parameterType="hashmap">
+		<![CDATA[
+			INSERT INTO GOODS_LIKE (
+			                    GOODS_LIKE_NUM,
+			                    GOODS_LIKE_USER,
+			                    GOODS_LIKE_PARENT
+			                    )
+							VALUES (
+			                    GOODS_LIKE_SEQ.NEXTVAL,
+			                    (SELECT MEM_NUM FROM MEMBER WHERE MEM_EMAIL = #{LIKE_MEM_EMAIL}),
+			                    #{LIKE_GOODS_NUM}
+			                    )
+		]]>
+	</insert>    
+   
+	<!-- 찜 취소 -->
+	<delete id="deleteGoodsLike" parameterType="hashmap">
+		<![CDATA[
+			DELETE 
+			FROM    GOODS_LIKE 
+			WHERE   GOODS_LIKE_USER = (SELECT MEM_NUM FROM MEMBER WHERE MEM_EMAIL = #{LIKE_MEM_EMAIL})
+			AND     GOODS_LIKE_PARENT = #{LIKE_GOODS_NUM}
+		]]>
+	</delete>
+	
+	<!-- 찜한 상품인지 확인 -->
+	<select id="selectGoodsLike" parameterType="hashmap" resultType="hashmap"> 
+		<![CDATA[
+			SELECT
+					GOODS_LIKE_NUM,
+			    	GOODS_LIKE_USER,
+			    	GOODS_LIKE_PARENT
+			FROM
+					GOODS_LIKE
+			WHERE
+					GOODS_LIKE_USER = #{session_MEM_NUM}
+		]]>
+	</select>
+	
+	
+</mapper>
