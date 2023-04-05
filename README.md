@@ -2,11 +2,12 @@
 1팀 1차 프로젝트
 
 - 내사남사 핵심 기능
-1. 간편하게 결제할 수 있는 카카오페이 https://github.com/taek-s/NaeSaNamSa/blob/main/NS/src/main/java/ns/kakaopay/controller/KakaoPayController.java
-3. 판매자와 구매자 사이에 원활한 소통을 위한 메시지
-4. 회원가입 시 이메일 중복확인과 동시에 이메일 인증을 받음
-5. 상품 등록, 수정 시 다중 이미지 업로드와 업로드 전 썸네일 확인, 쉽고 편한 이미지 수정
-6. 판매자 상세보기 내에서 이루어지는 추천과 후기 작성
+1. 간편하게 결제할 수 있는 카카오페이
+https://github.com/taek-s/NaeSaNamSa/blob/main/NS/src/main/java/ns/kakaopay/controller/KakaoPayController.java
+2. 판매자와 구매자 사이에 원활한 소통을 위한 메시지
+3. 회원가입 시 이메일 중복확인과 동시에 이메일 인증을 받음
+4. 상품 등록, 수정 시 다중 이미지 업로드와 업로드 전 썸네일 확인, 쉽고 편한 이미지 수정
+5. 판매자 상세보기 내에서 이루어지는 추천과 후기 작성
 
 - 개발 목표
 내사남사는 중고거래 사이트입니다.
